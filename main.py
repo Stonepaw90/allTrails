@@ -1,3 +1,4 @@
+#streamlit run allTrails/main.py
 import requests
 #import re
 import pandas as food
@@ -152,6 +153,8 @@ def get_fig_from_df(df):
                       df["time_created"]]
     #df["pace_datetime"] = [datetime.strptime(pace, "%Y-%m-%dT%H:%M:%SZ") for pace in df["pace"]]
     df["pace_datedelta"] = [timedelta(seconds = pace) for pace in df["pace"]]
+    df["time_taken_string"] = [timedelta(seconds = pace) for pace in df["pace"]]
+
     #pace_string = []
     #pace_datetime = []
     #for pace in df["pace"]:
@@ -166,8 +169,9 @@ def get_fig_from_df(df):
     #pace_datetime = []
 
     fig = px.scatter(df,
-                     x="miles", y=df["pace_datedelta"]+ food.to_datetime('1970/01/01'), color="is_weekend",  # color = "datetime",
-                     custom_data=["date_string", "mile_pace_string", "time_taken"]
+                     x="miles", y=df["pace_datedelta"],#+ food.to_datetime('1970/01/01'),
+                     color="is_weekend",  # color = "datetime",
+                     custom_data=["date_string", "mile_pace_string", "time_taken_string"]
                      )
     fig.update_traces(
         hovertemplate='<b>Time of Hike</b>: %{customdata[0]}<br>' +
@@ -194,18 +198,23 @@ def main():
                         "Skiing", "Paddle sports", "Camping", "Fishing", "Bird watching",
                         "Horseback riding", "Rock climbing", "Via ferrata"]
     user_list = ["38485383", "6597282", "69037412", "5624674", "61300094", "65720818", "19450700", "36307315", "49203513"] #"40038212",
+    with st.form("my_form"):
+        user_id = st.text_input("Enter the ID for the user to plot for.")
+        st.write("Perhaps:")
+        cols = st.columns(8)
+        for idx, col in enumerate(cols):
+            col.write(user_list[idx])
+        user_activities = st.multiselect("Which activities are you interested in?", options = activity_options, default = activity_options)
+        submitted = st.form_submit_button("Submit")
+        if (len(user_activities) == 0):
+            st.write("Select an activity to plot your pace.")
+        elif submitted:
+            df = get_df_from_user_id(user_id)
+            #df1 = df[(df.type1 in user_activities) | (df.type2 in user_activities)]
+            df1 = df.copy()[(df["type1"].isin(user_activities)) | (df["type2"].isin(user_activities))]
 
-    user_id = st.text_input("Enter the ID for the user to plot for.", value = random_from_list(user_list))
-    user_activities = st.multiselect("Which activities are you interested in?", options = activity_options, default = activity_options)
-    df = get_df_from_user_id(user_id)
-    if(len(user_activities) > 0):
-        #df1 = df[(df.type1 in user_activities) | (df.type2 in user_activities)]
-        df1 = df.copy()[(df["type1"].isin(user_activities)) | (df["type2"].isin(user_activities))]
-
-        fig = get_fig_from_df(df1)
-        st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.write("Select an activity to plot your pace.")
+            fig = get_fig_from_df(df1)
+            st.plotly_chart(fig, use_container_width=True)
 
 if __name__ == "__main__":
     main()
